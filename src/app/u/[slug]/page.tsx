@@ -1,11 +1,18 @@
-import { supabase } from "@/lib/supabase/client";
 import ProfileClient from "./profile-client";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
-export default async function Page({ params }: { params: { slug: string } }) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params; // ✅ Next ใหม่ต้อง await params
+  const supabase = await createSupabaseServer(); // ✅ ตอนนี้เป็น async แล้ว
+
   const { data, error } = await supabase
     .from("contacts")
     .select("*")
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .single();
 
   if (error || !data) {
@@ -19,4 +26,3 @@ export default async function Page({ params }: { params: { slug: string } }) {
 
   return <ProfileClient contact={data} />;
 }
-
