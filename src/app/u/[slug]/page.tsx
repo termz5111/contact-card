@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 import ProfileClient from "./profile-client";
 
 export default async function Page({ params }: { params: { slug: string } }) {
