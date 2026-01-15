@@ -43,7 +43,7 @@ export default function AdminPage() {
     }
   }
 
-  // ฟังก์ชันสำหรับลบข้อมูล
+  // ฟังก์ชันลบข้อมูล
   async function handleDelete(id: string, name: string) {
     if (!confirm(`คุณต้องการลบข้อมูลของ "${name}" ใช่หรือไม่?`)) return;
 
@@ -51,11 +51,23 @@ export default function AdminPage() {
       const { error } = await supabase.from("contacts").delete().eq("id", id);
       if (error) throw error;
 
-      // อัปเดตหน้าจอโดยการลบแถวนั้นออกจาก State ทันที (ไม่ต้องโหลดใหม่)
       setRows((prev) => prev.filter((r) => r.id !== id));
       alert("ลบข้อมูลสำเร็จ");
     } catch (err: any) {
       alert(`ลบไม่สำเร็จ: ${err?.message ?? String(err)}`);
+    }
+  }
+
+  // ✅ ฟังก์ชัน Copy Link
+  async function handleCopyLink(slug: string) {
+    const url = `https://card.graphic-station.net/u/${slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      // แจ้งเตือนเล็กน้อย
+      alert(`คัดลอกลิงก์แล้ว:\n${url}`);
+    } catch (err) {
+      console.error("Copy failed", err);
+      alert("เกิดข้อผิดพลาดในการคัดลอก");
     }
   }
 
@@ -84,7 +96,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="mx-auto w-full max-w-5xl px-4 py-10">
+      <div className="mx-auto w-full max-w-6xl px-4 py-10"> {/* ขยายความกว้างรวมเป็น max-w-6xl เพื่อให้ปุ่มไม่อึดอัด */}
+        
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -123,11 +136,11 @@ export default function AdminPage() {
         {/* Table */}
         <div className="mt-6 overflow-hidden rounded-3xl border border-white/15 bg-white">
           <div className="grid grid-cols-12 gap-2 border-b bg-white px-6 py-4 text-sm font-semibold text-neutral-900">
-            {/* ปรับขนาด Column: ลดชื่อลง 1, เพิ่มส่วนจัดการ 1 */}
-            <div className="col-span-4">ชื่อ</div>
-            <div className="col-span-4">ตำแหน่ง • บริษัท</div>
+            {/* ปรับ Layout Grid ใหม่: 3 + 3 + 2 + 4 = 12 */}
+            <div className="col-span-3">ชื่อ</div>
+            <div className="col-span-3">ตำแหน่ง • บริษัท</div>
             <div className="col-span-2">slug</div>
-            <div className="col-span-2 text-right">จัดการ</div>
+            <div className="col-span-4 text-right">จัดการ</div>
           </div>
 
           {loading ? (
@@ -145,33 +158,45 @@ export default function AdminPage() {
                   key={r.id}
                   className="grid grid-cols-12 gap-2 px-6 py-5 text-sm text-neutral-900 items-center"
                 >
-                  <div className="col-span-4">
-                    <div className="font-semibold text-neutral-900">{r.full_name}</div>
+                  <div className="col-span-3">
+                    <div className="font-semibold text-neutral-900 truncate" title={r.full_name}>
+                      {r.full_name}
+                    </div>
                   </div>
 
-                  <div className="col-span-4">
-                    <div className="text-neutral-900">
+                  <div className="col-span-3">
+                    <div className="text-neutral-900 truncate" title={(r.position || "") + " " + (r.company || "")}>
                       {(r.position || "-") + " • " + (r.company || "-")}
                     </div>
                   </div>
 
                   <div className="col-span-2">
-                    <div className="font-medium text-neutral-900">{r.slug}</div>
+                    <div className="font-medium text-neutral-900 truncate">{r.slug}</div>
                   </div>
 
-                  <div className="col-span-2 flex justify-end gap-2">
-                    {/* ปุ่ม Edit เดิม */}
+                  {/* Action Buttons */}
+                  <div className="col-span-4 flex justify-end gap-2">
+                    
+                    {/* ปุ่ม Copy Link (สีน้ำเงิน) */}
+                    <button
+                      onClick={() => handleCopyLink(r.slug)}
+                      className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition whitespace-nowrap"
+                    >
+                      Copy Link
+                    </button>
+
+                    {/* ปุ่ม Edit (สีเทา) */}
                     <Link
                       href={`/admin/edit/${r.id}`}
-                      className="rounded-full border border-neutral-300 bg-white px-4 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-50 transition"
+                      className="rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-50 transition"
                     >
                       Edit
                     </Link>
-                    
-                    {/* ปุ่ม Delete ใหม่ */}
+
+                    {/* ปุ่ม Delete (สีแดง) */}
                     <button
                       onClick={() => handleDelete(r.id, r.full_name)}
-                      className="rounded-full border border-red-200 bg-white px-4 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 transition"
+                      className="rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 transition"
                     >
                       Delete
                     </button>
