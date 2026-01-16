@@ -15,8 +15,8 @@ type Contact = {
   facebook?: string | null;
   instagram?: string | null;
 
-  photo_url?: string | null;   // อาจเป็น url หรือ path หรือ null
-  avatar_url?: string | null;  // ของคุณเป็น full URL
+  photo_url?: string | null;
+  avatar_url?: string | null;
 };
 
 const normUrl = (v?: string | null) => {
@@ -91,7 +91,18 @@ type Action = {
 
 export default function ProfileClient({ contact }: { contact: Contact }) {
   const [qr, setQr] = useState<string>("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // ตรวจจับขนาดหน้าจอเพื่อทำ Responsive Grid
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 600);
+    handleResize(); // ตรวจสอบครั้งแรกทันที
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // สร้าง QR Code
   useEffect(() => {
     (async () => {
       try {
@@ -115,7 +126,6 @@ export default function ProfileClient({ contact }: { contact: Contact }) {
     return "";
   }, [contact.avatar_url, contact.photo_url]);
 
-  // ✅ จุดสำคัญ: actions มีทั้ง label + value แล้ว render ออกมาจริง
   const actions: Action[] = useMemo(() => {
     const phone = (contact.phone || "").trim();
     const email = (contact.email || "").trim();
@@ -202,6 +212,18 @@ export default function ProfileClient({ contact }: { contact: Contact }) {
     URL.revokeObjectURL(objUrl);
   };
 
+  const handleCopy = async (e: React.MouseEvent, text: string, key: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy!", err);
+    }
+  };
+
   return (
     <main style={{ padding: 16, maxWidth: 860, margin: "0 auto" }}>
       <section
@@ -248,11 +270,11 @@ export default function ProfileClient({ contact }: { contact: Contact }) {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions Grid with Responsive & Copy Feature */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))",
             gap: 10,
             marginTop: 14,
           }}
@@ -269,24 +291,50 @@ export default function ProfileClient({ contact }: { contact: Contact }) {
                 borderRadius: 14,
                 padding: "12px 14px",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 4,
                 color: "inherit",
+                transition: "background 0.2s",
+                position: "relative",
               }}
             >
-              <span style={{ opacity: 0.9, whiteSpace: "nowrap" }}>{a.label}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                <span style={{ 
+                  opacity: 0.6, 
+                  fontSize: 12, 
+                  fontWeight: 500, 
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em" 
+                }}>
+                  {a.label}
+                </span>
+
+                <button
+                  onClick={(e) => handleCopy(e, a.value, a.key)}
+                  style={{
+                    background: copiedKey === a.key ? "#4ade80" : "rgba(255,255,255,0.1)",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "2px 8px",
+                    fontSize: 10,
+                    color: copiedKey === a.key ? "#000" : "#fff",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {copiedKey === a.key ? "คัดลอกแล้ว!" : "คัดลอก"}
+                </button>
+              </div>
+              
               <span
                 style={{
-                  opacity: 0.75,
-                  fontSize: 13,
-                  maxWidth: "62%",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  textAlign: "right",
+                  opacity: 1,
+                  fontSize: 15,
+                  wordBreak: "break-all",
+                  lineHeight: "1.4",
+                  fontWeight: 400
                 }}
-                title={a.value}
               >
                 {a.value}
               </span>

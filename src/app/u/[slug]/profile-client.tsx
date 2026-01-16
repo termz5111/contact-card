@@ -64,10 +64,28 @@ function vcfEscape(v: string) {
     .replace(/;/g, "\\;");
 }
 
+function splitName(fullName: string) {
+  const s = (fullName || "").trim().replace(/\s+/g, " ");
+  if (!s) return { first: "", last: "" };
+
+  const parts = s.split(" ");
+  if (parts.length === 1) return { first: parts[0], last: "" };
+
+  // heuristic: last token is last name, rest is first name
+  const last = parts.pop() || "";
+  const first = parts.join(" ");
+  return { first, last };
+}
+
 function buildVCard(c: Contact) {
   const lines: string[] = [];
   lines.push("BEGIN:VCARD");
   lines.push("VERSION:3.0");
+
+  const { first, last } = splitName(c.full_name || "");
+  // Many Contacts apps rely on structured name (N) for First/Last.
+  lines.push(`N:${vcfEscape(last)};${vcfEscape(first)};;;`);
+
   lines.push(`FN:${vcfEscape(c.full_name || "")}`);
   if (c.company) lines.push(`ORG:${vcfEscape(c.company)}`);
   if (c.position) lines.push(`TITLE:${vcfEscape(c.position)}`);
@@ -78,7 +96,9 @@ function buildVCard(c: Contact) {
   if (c.facebook) lines.push(`X-SOCIALPROFILE;type=facebook:${vcfEscape(normFb(c.facebook))}`);
   if (c.instagram) lines.push(`X-SOCIALPROFILE;type=instagram:${vcfEscape(normIg(c.instagram))}`);
   lines.push("END:VCARD");
-  return lines.join("\n");
+
+  // Prefer CRLF for maximum compatibility.
+  return lines.join("\r\n");
 }
 
 type Action = {
@@ -299,41 +319,51 @@ export default function ProfileClient({ contact }: { contact: Contact }) {
                 position: "relative",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
-                <span style={{ 
-                  opacity: 0.6, 
-                  fontSize: 12, 
-                  fontWeight: 500, 
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em" 
-                }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  width: "100%",
+                  alignItems: "center",
+                }}
+              >
+                <span
+                  style={{
+                    opacity: 0.6,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
                   {a.label}
                 </span>
 
                 <button
                   onClick={(e) => handleCopy(e, a.value, a.key)}
                   style={{
-                    background: copiedKey === a.key ? "#4ade80" : "rgba(255,255,255,0.1)",
+                    background:
+                      copiedKey === a.key ? "#4ade80" : "rgba(255,255,255,0.1)",
                     border: "none",
                     borderRadius: 6,
                     padding: "2px 8px",
                     fontSize: 10,
                     color: copiedKey === a.key ? "#000" : "#fff",
                     cursor: "pointer",
-                    transition: "all 0.2s"
+                    transition: "all 0.2s",
                   }}
                 >
                   {copiedKey === a.key ? "คัดลอกแล้ว!" : "คัดลอก"}
                 </button>
               </div>
-              
+
               <span
                 style={{
                   opacity: 1,
                   fontSize: 15,
                   wordBreak: "break-all",
                   lineHeight: "1.4",
-                  fontWeight: 400
+                  fontWeight: 400,
                 }}
               >
                 {a.value}
@@ -361,7 +391,9 @@ export default function ProfileClient({ contact }: { contact: Contact }) {
 
         {/* QR */}
         <div style={{ marginTop: 16, display: "grid", placeItems: "center" }}>
-          <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 8 }}>QR Code</div>
+          <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 8 }}>
+            QR Code
+          </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {qr ? (
             <img src={qr} alt="QR" style={{ width: 220, height: 220 }} />
